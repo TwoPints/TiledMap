@@ -119,6 +119,16 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 				Tiled::Base64Decoder::Decode(decodedData, dataElement->GetText());
 				// Test TMX file is 3 byte more than expected - hrm.
 				//printf("%d - %d\n",decodedData.size(), m_mapData.size() * 4);
+				
+				auto dataInter = decodedData.begin();
+				for (auto &tileData : m_mapData) {
+					const uint32_t a = *dataInter++;
+					const uint32_t b = *dataInter++ << 8;
+					const uint32_t c = *dataInter++ << 16;
+					const uint32_t d = *dataInter++ << 24;
+					tileData = a | b | c | d;
+					//printf("%d\n",tileData);
+				}
             }
             else
             {

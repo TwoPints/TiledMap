@@ -39,8 +39,8 @@ void Tiled::MapHeader::FixupPointers()
 	strings.offset		+= mapDataIndex;
 	
 	for( int layerIdx(0); layerIdx<numLayers; ++layerIdx )
-    {
-        MapLayer &pLayer = mapLayers.ptr[layerIdx];
+	{
+		MapLayer &pLayer = mapLayers.ptr[layerIdx];
 	    pLayer.layerName.offset += strings.offset;
 	    pLayer.layerData.offset += mapData.offset;
 	}
