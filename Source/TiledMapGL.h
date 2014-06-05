@@ -1,7 +1,6 @@
 //
 //  TiledMapGL.h
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com
@@ -54,7 +53,7 @@ public:
 private:
 	
 	void GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,GLuint&)> &attribIndices );
-
+	
     
     struct VertexDef
     {

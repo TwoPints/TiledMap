@@ -1,7 +1,6 @@
 //
 //  TiledMapGL.cpp
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com
@@ -32,7 +31,7 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
 	int32_t _numQuads    = maxTilesToRender;
 	int32_t _numVertices = _numQuads * 4;
 	int32_t _numIndices  = _numVertices + (_numVertices>>1);
-
+	
 	//////////////////////////////////////////////////////////////
 	// Indices
 	//////////////////////////////////////////////////////////////
@@ -61,7 +60,7 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, _numIndices * sizeof(GLushort), indices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	delete[] indices;
-
+	
 	//////////////////////////////////////////////////////////////
 	// Vertices
 	//////////////////////////////////////////////////////////////
@@ -69,20 +68,20 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
 	vertexBufferIdx = 0;
 	vertexBuffer = new VertexDef[_numIndices];
 	memset(vertexBuffer, 0, bufferIndexSize);
-
+	
 	for (int i=0; i<NUM_VERTEX_VBO_BUFFERS; ++i)
     {
 		GLuint attribPosition = 0;
 		GLuint attribColor = 0;
 		GLuint attribTexCoords = 0;
 		attribIndices(i, attribPosition, attribColor, attribTexCoords);
-    
+		
     	// Generate dynamic vbo so we can change the data later, copy the prefab data to stop any bitching.
 	    glGenBuffers(1, &vertexVBO[i]);
     	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO[i]);
     	glBufferData(GL_ARRAY_BUFFER, bufferIndexSize, vertexBuffer, GL_DYNAMIC_DRAW);
     	glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
+		
     	// Create vertex array object for speed, not sure if it helps in the scheme of things as presentRenderBuffer takes more time (unless this is idle time?)
 	    glGenVertexArraysOES(1, &vao[i]);
     	glBindVertexArrayOES(vao[i]);
@@ -95,12 +94,12 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
     	glEnableVertexAttribArray(attribColor);
     	glVertexAttribPointer(attribTexCoords, 2, GL_FLOAT, GL_TRUE, sizeof(VertexDef), (void *)(offsetof(VertexDef, u)));
     	glEnableVertexAttribArray(attribTexCoords);
-    
+		
     	glBindVertexArrayOES(0);
     	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
-
+	
 }
 
 void TiledGL::Update()

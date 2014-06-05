@@ -1,7 +1,6 @@
 //
 //  TiledMapParser.h
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com

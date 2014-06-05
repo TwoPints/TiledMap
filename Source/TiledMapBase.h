@@ -1,7 +1,6 @@
 //
 //  TiledMapBase.h
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com
@@ -26,7 +25,7 @@
 // distribution.
 
 #pragma once
-#include <inttypes.h>
+#include <cstdint>
 
 namespace Tiled
 {
@@ -36,7 +35,7 @@ namespace Tiled
 	{
 		return string[0] == 0 ? hash : consthash_fnv1a (string + 1, fnv32_prime * (hash ^ string[0]));
 	}
-
+	
 	
 	//enum class TileMask : uint32_t
 	//{
@@ -55,32 +54,32 @@ namespace Tiled
 	const uint32_t TiledWrpH = 0x00000004;
 	const uint32_t TiledWrpV = 0x00000008;
 	//};
-
+	
 	template <typename T>
 	union Relocator
 	{
 	    uint64_t offset;
 	    T *ptr;
 	};
-
+	
 	struct Point
 	{
 		float x, y;
 	};
-
+	
 	struct TileSet
 	{
 		int32_t         imageWidth, imageHeight;
 		uint32_t        tileWidth, tileHeight;
 		Relocator<char> imageFileName;
 	};
-
+	
 	struct TileData
 	{
 		int32_t			tileSet;
 		float			u0, v0, u1, v1;
 	};
-
+	
 	struct MapLayer
 	{
 		int32_t             layerWidth, layerHeight;
@@ -89,7 +88,7 @@ namespace Tiled
 		Relocator<char>     layerName;
 		Relocator<uint32_t> layerData;
 	};
-
+	
 	struct Property
 	{
 		uint32_t		propertyType;
@@ -100,7 +99,7 @@ namespace Tiled
 		}	propertyData;
 	    Relocator<char> propertyName;
 	};
-
+	
 	struct Entity
 	{
 		uint32_t               objectTypeHash;
@@ -111,7 +110,7 @@ namespace Tiled
 		Relocator<Property>    properties;
 		Relocator<Point>       points;
 	};
-
+	
 	struct MapHeader
 	{
 		float				version;
@@ -121,24 +120,24 @@ namespace Tiled
 		float				pixelsWidth,	pixelsHeight;
 		int32_t				numTileSets,	numLayers;
 		int32_t				numObjects;
-	
+		
 		Relocator<TileSet>	tileSets;
 		Relocator<TileData>	tileMetrics;
-	
+		
 		Relocator<MapLayer>	mapLayers;
 		Relocator<uint32_t>	mapData;
-	
+		
 		Relocator<Entity>	entities;
 		Relocator<Point>	points;
-	
+		
 		Relocator<Property>	properties;
 		Relocator<char>		strings;
-    
+		
 	    void FixupPointers();
 	};
 	
 	////////////////////////////////////////////////////////////////////////////////////
-
+	
 	class Map
 	{
 	public:
@@ -156,13 +155,13 @@ namespace Tiled
 				numTilesHigh = ((screenPixelsHigh + (mapData->tileHeight-1)) / mapData->tileHeight) + 1;
 				// Decide on map options, fit, wrap, scroll etc.
 				//if (numTilesWide > mapData->blocksWide || numTilesHigh > mapData->blocksHigh) {
-					//numTilesWide = mapData->blocksWide;
-					//numTilesHigh = mapData->blocksHigh;
+				//numTilesWide = mapData->blocksWide;
+				//numTilesHigh = mapData->blocksHigh;
 				//}
 				maxTilesToRender = numTilesWide * numTilesHigh;
 			}
 		}
-
+		
 		virtual ~Map() {}
 		virtual void Render() const = 0;
 		const MapHeader *MapData() const
@@ -187,5 +186,5 @@ namespace Tiled
 		Map();
     };
 	
-
+	
 }

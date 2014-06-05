@@ -1,7 +1,6 @@
 //
 //  TiledMapParser.cpp
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com
@@ -26,18 +25,19 @@
 // distribution.
 
 #include "TiledMapParser.h"
+#include "TiledMapBase64.h"
 
 bool TMXConverter::ProcessMap( const char *TMXXmlData )
 {
 	tinyxml2::XMLDocument _document;
 	_document.Parse(TMXXmlData);
-        
+	
 	tinyxml2::XMLElement *mapElement = _document.FirstChildElement("map");
     if (!mapElement)
     {
 		return false;
 	}
-        
+	
     m_header.version = atof(mapElement->Attribute("version"));
     m_header.blocksWide = atoi(mapElement->Attribute("width"));
     m_header.blocksHigh = atoi(mapElement->Attribute("height"));
@@ -45,7 +45,7 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
     m_header.tileHeight  = atoi(mapElement->Attribute("tileheight"));
     m_header.pixelsWidth = m_header.blocksWide * m_header.tileWidth;
     m_header.pixelsHeight = m_header.blocksHigh * m_header.tileHeight;
-        
+	
     tinyxml2::XMLElement *tileSetElement = mapElement->FirstChildElement("tileset");
     while (tileSetElement)
     {
@@ -63,18 +63,18 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
             int32_t _spacing			 = tileSetElement->Attribute("spacing") ? atoi(tileSetElement->Attribute("spacing")) : 0;
             int32_t _margin				 = tileSetElement->Attribute("margin")  ? atoi(tileSetElement->Attribute("margin"))  : 0;
             int32_t _firstGid			 = atoi(tileSetElement->Attribute("firstgid")) - 1;
-                
+			
             uint32_t _tilesWide			 = (tileSet.imageWidth  - _margin * 2 + _spacing) / (tileSet.tileWidth  + _spacing);
             uint32_t _tilesHigh			 = (tileSet.imageHeight - _margin * 2 + _spacing) / (tileSet.tileHeight + _spacing);
             int32_t  _lastGid			 = _firstGid + _tilesWide * _tilesHigh;
-                
+			
             m_tileMetrics.resize(_lastGid);
-                
+			
             float _nw = 1.0f / static_cast<float>(tileSet.imageWidth);
             float _nh = 1.0f / static_cast<float>(tileSet.imageHeight);
             float _n2w = static_cast<float>(tileSet.imageWidth)  / static_cast<float>(NextPOT(tileSet.imageWidth));
             float _n2h = static_cast<float>(tileSet.imageHeight) / static_cast<float>(NextPOT(tileSet.imageHeight));
-                
+			
             for (uint32_t y = 0; y < _tilesHigh; ++y)
             {
                 for (uint32_t x = 0; x < _tilesWide; ++x)
@@ -83,12 +83,12 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
                     tileData.v0 = static_cast<float>(y * (tileSet.tileHeight + _spacing) + _margin) * _nh;
                     tileData.u1 = tileData.u0 + (static_cast<float>(tileSet.tileWidth) * _nw);
                     tileData.v1 = tileData.v0 + (static_cast<float>(tileSet.tileWidth) * _nh);
-                        
+					
                     tileData.u0 *= _n2w;
                     tileData.v0 *= _n2h;
                     tileData.u1 *= _n2w;
                     tileData.v1 *= _n2h;
-                        
+					
                     m_tileMetrics[_firstGid++] = tileData;
                 }
             }
@@ -96,49 +96,58 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
         }
         tileSetElement = tileSetElement->NextSiblingElement("tileset");
     }
-        
+	
     tinyxml2::XMLElement *layerSetElement = mapElement->FirstChildElement("layer");
     while (layerSetElement)
     {
         if ( tinyxml2::XMLElement *dataElement = layerSetElement->FirstChildElement("data")) {
             Tiled::MapLayer layerSet;
-                
+			
             layerSet.layerName.offset = AddString(layerSetElement->Attribute("name"));
             layerSet.layerWidth = atoi(layerSetElement->Attribute("width"));
             layerSet.layerHeight = atoi(layerSetElement->Attribute("height"));
             layerSet.layerData.offset = static_cast<uint64_t>(m_mapLayers.size());
-                
+			
             uint64_t startIdx = layerSet.layerData.offset;
             uint64_t endIdx = startIdx + layerSet.layerWidth * layerSet.layerHeight;
-                
+			
             m_mapData.resize(endIdx);
-                
-            const char *data = dataElement->GetText();
-            char *dataCopy = new char[strlen(data)+1];
-            memccpy(dataCopy, data, 0, strlen(data)+1);
-                
-            static const char seperators[] = " \t\n\r,";
-            char *token = strtok(dataCopy, seperators);
-            for (uint64_t i=startIdx; i<endIdx; ++i)
+            
+            if (dataElement->Attribute("encoding") && std::string("base64").compare(dataElement->Attribute("encoding"))==0)
             {
-                if (token)
-                {
-                    m_mapData[i] = atoi(token);
-                    token = strtok(NULL, seperators);
-            	}
-                else
-                {
-                    m_mapData[i] = 0;
-                }
+				std::vector<uint8_t> decodedData;
+				Tiled::Base64Decoder::Decode(decodedData, dataElement->GetText());
+				// Test TMX file is 3 byte more than expected - hrm.
+				//printf("%d - %d\n",decodedData.size(), m_mapData.size() * 4);
             }
+            else
+            {
+				const char *data = dataElement->GetText();
+				char *dataCopy = new char[strlen(data)+1];
+				memccpy(dataCopy, data, 0, strlen(data)+1);
                 
-            delete[] dataCopy;
+        		static const char seperators[] = " \t\n\r,";
+            	char *token = strtok(dataCopy, seperators);
+            	for (uint64_t i=startIdx; i<endIdx; ++i)
+            	{
+            	    if (token)
+            	    {
+            	        m_mapData[i] = atoi(token);
+            	        token = strtok(NULL, seperators);
+            		}
+            	    else
+            	    {
+            	        m_mapData[i] = 0;
+            	    }
+            	}
+                delete[] dataCopy;
+            }
             m_mapLayers.push_back(layerSet);
-                
+			
         }
         layerSetElement = layerSetElement->NextSiblingElement("layer");
     }
-        
+	
     tinyxml2::XMLElement *objectGroupElement = mapElement->FirstChildElement("objectgroup");
     while (objectGroupElement)
     {
@@ -147,12 +156,12 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
         {
             float x = atof(objectElement->Attribute("x"));
             float y = atof(objectElement->Attribute("y"));
-                
+			
             Tiled::Entity object;
             Tiled::Point point{x,y};
-                
+			
             object.tiledID = objectElement->Attribute("gid") ? atoi(objectElement->Attribute("gid"))-1 : 0;
-                
+			
             object.objectName.offset = AddString(objectElement->Attribute("name"));
             object.objectTypeHash = Tiled::consthash_fnv1a(objectElement->Attribute("type"));
             object.points.offset = static_cast<uint64_t>(m_points.size() * sizeof(Tiled::Point));
@@ -163,7 +172,7 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
                 const char *data = polylineElement->Attribute("points");
                 char *dataCopy = new char[strlen(data)+1];
                 memccpy(dataCopy, data, 0, strlen(data)+1);
-                    
+				
                 static const char seperators[] = " ";
                 char *token = strtok(dataCopy, seperators);
                 while (token)
@@ -183,15 +192,15 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
                 ++object.numPoints;
                 m_points.push_back(point);
             }
-                
+			
             object.numProperties = AddProperties(objectElement, object.properties.offset);
-                
+			
             m_objects.push_back(object);
             objectElement = objectElement->NextSiblingElement("object");
         }
         objectGroupElement = objectGroupElement->NextSiblingElement("objectgroup");
     }
-        
+	
     return true;
 }
 
@@ -208,7 +217,7 @@ uint64_t TMXConverter::SaveMap( char* &buffer )
 	m_header.points.offset		= m_header.entities.offset + sizeof(Tiled::Entity) * m_objects.size();
 	m_header.properties.offset	= m_header.points.offset + sizeof(Tiled::Point) * m_points.size();
 	m_header.strings.offset		= m_header.properties.offset + sizeof(Tiled::Property) * m_properties.size();
-
+	
     
 	// The lack of std::memory_stream can bite my big shiny metal....
 	uint64_t bufferSize = m_header.strings.offset + m_stringBuffer.size();
@@ -223,7 +232,7 @@ uint64_t TMXConverter::SaveMap( char* &buffer )
 	Copy(bufferPtr, reinterpret_cast<char*>(&m_points[0]), 		sizeof(Tiled::Point) * m_points.size() 			);
 	Copy(bufferPtr, reinterpret_cast<char*>(&m_properties[0]), 	sizeof(Tiled::Property) * m_properties.size() 	);
 	Copy(bufferPtr, reinterpret_cast<char*>(&m_stringBuffer[0]),sizeof(char) * m_stringBuffer.size() 			);
-			
+	
 	return bufferSize;
 }
 
@@ -238,7 +247,7 @@ uint32_t TMXConverter::AddString( const char *string )
     }
     return stringOffset;
 }
-	
+
 uint32_t TMXConverter::AddProperties( tinyxml2::XMLElement *parentElement, uint64_t &propertiesOffset )
 {
     Tiled::Property property;

@@ -1,7 +1,6 @@
 //
 //  TiledMapBase.cpp
 //
-//  Created by KISS Projekt on 30/05/2014.
 //  (c)2014 KISS Projekt
 //
 //  KissProjekt@hotmail.com
@@ -38,14 +37,14 @@ void Tiled::MapHeader::FixupPointers()
 	points.offset		+= mapDataIndex;
 	properties.offset	+= mapDataIndex;
 	strings.offset		+= mapDataIndex;
-
+	
 	for( int layerIdx(0); layerIdx<numLayers; ++layerIdx )
     {
         MapLayer &pLayer = mapLayers.ptr[layerIdx];
 	    pLayer.layerName.offset += strings.offset;
 	    pLayer.layerData.offset += mapData.offset;
 	}
-
+	
 	for( int objectIdx(0); objectIdx<numObjects; ++objectIdx )
     {
 	    Entity &entity = entities.ptr[objectIdx];
@@ -57,7 +56,7 @@ void Tiled::MapHeader::FixupPointers()
     	    entity.properties.ptr[propertyIdx].propertyName.offset += strings.offset;
     	}
 	}
-
+	
 	for( int textureIdx(0); textureIdx<numTileSets; ++textureIdx )
 	{
 	    TileSet &pTileSet = tileSets.ptr[textureIdx];
