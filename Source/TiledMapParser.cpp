@@ -26,6 +26,7 @@
 
 #include "TiledMapParser.h"
 #include "TiledMapBase64.h"
+#include <zlib.h>
 
 bool TMXConverter::ProcessMap( const char *TMXXmlData )
 {
@@ -113,47 +114,66 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 			
             m_mapData.resize(endIdx);
             
-            if (dataElement->Attribute("encoding") && std::string("base64").compare(dataElement->Attribute("encoding"))==0)
+            if (dataElement->Attribute("encoding"))
             {
-				std::vector<uint8_t> decodedData;
-				Tiled::Base64Decoder::Decode(decodedData, dataElement->GetText());
-				// Test TMX file is 3 byte more than expected - hrm.
-				//printf("%d - %d\n",decodedData.size(), m_mapData.size() * 4);
-				
-				auto dataInter = decodedData.begin();
-				for (auto &tileData : m_mapData) {
-					const uint32_t a = *dataInter++;
-					const uint32_t b = *dataInter++ << 8;
-					const uint32_t c = *dataInter++ << 16;
-					const uint32_t d = *dataInter++ << 24;
-					tileData = a | b | c | d;
-					//printf("%d\n",tileData);
+				if(std::string("base64").compare(dataElement->Attribute("encoding"))==0)
+				{
+					std::vector<uint8_t> decodedData;
+					Tiled::Base64Decoder::Decode(decodedData, dataElement->GetText());
+					// Test TMX file is 3 byte more than expected - hrm.
+					//printf("%d - %d\n",decodedData.size(), m_mapData.size() * 4);
+					
+					
+					if (dataElement->Attribute("compression"))
+					{
+						if(std::string("zlib").compare(dataElement->Attribute("compression"))==0) // || std::string("gzip").compare(dataElement->Attribute("compression"))==0)
+						{
+#if defined(ZLIB_H)
+							// Only support zlib for now as one line is easier to write than more than one. :)
+							uLongf outputDataSize = m_mapData.size() * 4;
+							int r = ::uncompress(reinterpret_cast<unsigned char*>(m_mapData.data()), &outputDataSize, decodedData.data(), decodedData.size() - 3);
+							//printf("Res = %d\n",r);
+#endif
+						}
+					}
+					else
+					{
+						auto dataInter = decodedData.begin();
+						for (auto &tileData : m_mapData) {
+							const uint32_t a = *dataInter++;
+							const uint32_t b = *dataInter++ << 8;
+							const uint32_t c = *dataInter++ << 16;
+							const uint32_t d = *dataInter++ << 24;
+							tileData = a | b | c | d;
+							//printf("%d\n",tileData);
+						}
+					}
+					
+				}
+				else if(std::string("csv").compare(dataElement->Attribute("encoding"))==0)
+				{
+					const char *data = dataElement->GetText();
+					char *dataCopy = new char[strlen(data)+1];
+					memccpy(dataCopy, data, 0, strlen(data)+1);
+					
+					static const char seperators[] = " \t\n\r,";
+					char *token = strtok(dataCopy, seperators);
+					for (uint64_t i=startIdx; i<endIdx; ++i)
+					{
+						if (token)
+						{
+							m_mapData[i] = atoi(token);
+							token = strtok(NULL, seperators);
+						}
+						else
+						{
+							m_mapData[i] = 0;
+						}
+					}
+					delete[] dataCopy;
 				}
             }
-            else
-            {
-				const char *data = dataElement->GetText();
-				char *dataCopy = new char[strlen(data)+1];
-				memccpy(dataCopy, data, 0, strlen(data)+1);
-                
-        		static const char seperators[] = " \t\n\r,";
-            	char *token = strtok(dataCopy, seperators);
-            	for (uint64_t i=startIdx; i<endIdx; ++i)
-            	{
-            	    if (token)
-            	    {
-            	        m_mapData[i] = atoi(token);
-            	        token = strtok(NULL, seperators);
-            		}
-            	    else
-            	    {
-            	        m_mapData[i] = 0;
-            	    }
-            	}
-                delete[] dataCopy;
-            }
             m_mapLayers.push_back(layerSet);
-			
         }
         layerSetElement = layerSetElement->NextSiblingElement("layer");
     }
