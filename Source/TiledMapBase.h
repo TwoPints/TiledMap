@@ -26,6 +26,7 @@
 
 #pragma once
 #include <cstdint>
+#include <functional>
 
 namespace Tiled
 {
@@ -71,6 +72,7 @@ namespace Tiled
 	{
 		int32_t         imageWidth, imageHeight;
 		uint32_t        tileWidth, tileHeight;
+		uint32_t		firstTileID, lastTileID;
 		Relocator<char> imageFileName;
 	};
 	
@@ -163,7 +165,7 @@ namespace Tiled
 		}
 		
 		virtual ~Map() {}
-		virtual void Render() const = 0;
+		virtual void Render( const std::function<void(uint32_t,bool)> &textureSetter ) const = 0;
 		const MapHeader *MapData() const
 		{
 			return mapData;

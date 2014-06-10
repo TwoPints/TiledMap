@@ -69,6 +69,9 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
             uint32_t _tilesHigh			 = (tileSet.imageHeight - _margin * 2 + _spacing) / (tileSet.tileHeight + _spacing);
             int32_t  _lastGid			 = _firstGid + _tilesWide * _tilesHigh;
 			
+			tileSet.firstTileID			 = _firstGid;
+			tileSet.lastTileID			 = _lastGid;
+			
             m_tileMetrics.resize(_lastGid);
 			
             float _nw = 1.0f / static_cast<float>(tileSet.imageWidth);
@@ -227,6 +230,17 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
         }
         objectGroupElement = objectGroupElement->NextSiblingElement("objectgroup");
     }
+	
+	for (const auto &tileSet : m_tileSets)
+	{
+		for (auto &mapData : m_mapData)
+		{
+			if ((mapData & Tiled::TILE_MASK) > tileSet.lastTileID)
+			{
+				mapData += 1 << Tiled::TILESET_SHIFT;
+			}
+		}
+	}
 	
     return true;
 }

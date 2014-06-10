@@ -166,15 +166,17 @@
 {
 	[support finishQuadBatch];
 	
-	[support addDrawCalls:1];
-    SPBaseEffect *effect = baseEffect[tiledEngine->VertexBufferIndex()];
-	effect.mvpMatrix = support.mvpMatrix;
-	effect.alpha = support.alpha;
-	effect.texture = [mTextures lastObject];
-	[effect prepareToDraw];
-	[SPBlendMode applyBlendFactorsForBlendMode:support.blendMode premultipliedAlpha:YES];
-
-	tiledEngine->Render();
+    auto setTexture = [=](uint32_t textureIndex, bool opaque)
+    {
+        [support addDrawCalls:1];
+        SPBaseEffect *effect = baseEffect[tiledEngine->VertexBufferIndex()];
+        effect.mvpMatrix = support.mvpMatrix;
+        effect.alpha = support.alpha;
+        effect.texture = mTextures[textureIndex];
+        [effect prepareToDraw];
+        [SPBlendMode applyBlendFactorsForBlendMode:support.blendMode premultipliedAlpha:YES];
+    };
+	tiledEngine->Render(setTexture);
 }
 
 -(SPTexture*)textureWithIndex:(int)index

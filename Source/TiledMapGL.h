@@ -30,6 +30,7 @@
 #include <TiledMapBase.h>
 #include <functional>
 #include <algorithm>
+#include <vector>
 
 const uint32_t NUM_VERTEX_VBO_BUFFERS = 2;
 
@@ -47,7 +48,7 @@ public:
 	}
 	
     void Update();
-	void Render() const;
+	void Render( const std::function<void(uint32_t,bool)> &textureSetter ) const;
     int32_t VertexBufferIndex() const { return vertexBufferIdx; }
     
 private:
@@ -64,12 +65,17 @@ private:
 	
     
 	GLuint		indexVBO;
-    GLuint		vertexVBO[NUM_VERTEX_VBO_BUFFERS];
-	GLuint		vao[NUM_VERTEX_VBO_BUFFERS];
-	int32_t		numQuads[NUM_VERTEX_VBO_BUFFERS];
-	int32_t		numVertices[NUM_VERTEX_VBO_BUFFERS];
-	int32_t		numIndices[NUM_VERTEX_VBO_BUFFERS];
-	
+	struct
+	{
+    	GLuint					vertexVBO;
+		GLuint					vao;
+		int32_t					numQuads;
+		int32_t					numVertices;
+		int32_t					numIndices;
+		std::vector<uint32_t>	textureBatches;
+	}
+	buffers[NUM_VERTEX_VBO_BUFFERS];
+		
 	int32_t		vertexBufferIdx;
     VertexDef	*vertexBuffer;
 };
