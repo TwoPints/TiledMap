@@ -127,7 +127,10 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 #if defined(ZLIB_H)
 							// Only support zlib for now as one line is easier to write than more than one. :)
 							uLongf outputDataSize = m_mapData.size() * 4;
-							int r = ::uncompress(reinterpret_cast<unsigned char*>(m_mapData.data()), &outputDataSize, decodedData.data(), decodedData.size());
+							int decompressedDataSize = ::uncompress(reinterpret_cast<unsigned char*>(m_mapData.data()), &outputDataSize, decodedData.data(), decodedData.size());
+							if (decompressedDataSize != outputDataSize) {
+								//printf("Expected to decode %ld bytes but decoded %d bytes", outputDataSize ,decompressedDataSize);
+							}
 #endif
 						}
 					}
