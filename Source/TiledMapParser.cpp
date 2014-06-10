@@ -120,10 +120,6 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 				{
 					std::vector<uint8_t> decodedData;
 					Tiled::Base64Decoder::Decode(decodedData, dataElement->GetText());
-					// Test TMX file is 3 byte more than expected - hrm.
-					//printf("%d - %d\n",decodedData.size(), m_mapData.size() * 4);
-					
-					
 					if (dataElement->Attribute("compression"))
 					{
 						if(std::string("zlib").compare(dataElement->Attribute("compression"))==0) // || std::string("gzip").compare(dataElement->Attribute("compression"))==0)
@@ -131,8 +127,7 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 #if defined(ZLIB_H)
 							// Only support zlib for now as one line is easier to write than more than one. :)
 							uLongf outputDataSize = m_mapData.size() * 4;
-							int r = ::uncompress(reinterpret_cast<unsigned char*>(m_mapData.data()), &outputDataSize, decodedData.data(), decodedData.size() - 3);
-							//printf("Res = %d\n",r);
+							int r = ::uncompress(reinterpret_cast<unsigned char*>(m_mapData.data()), &outputDataSize, decodedData.data(), decodedData.size());
 #endif
 						}
 					}
@@ -145,7 +140,6 @@ bool TMXConverter::ProcessMap( const char *TMXXmlData )
 							const uint32_t c = *dataInter++ << 16;
 							const uint32_t d = *dataInter++ << 24;
 							tileData = a | b | c | d;
-							//printf("%d\n",tileData);
 						}
 					}
 					

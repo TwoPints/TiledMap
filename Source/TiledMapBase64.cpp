@@ -74,7 +74,7 @@ int32_t Tiled::Base64Decoder::Decode( std::vector<uint8_t> &output, const std::s
 	{
 		++inputEnd;
 	}
-	auto packetCount = std::distance(input.begin(), inputEnd);
+	auto packetCount = std::distance(inputBegin, inputEnd);
 	if(packetCount > 1)
 	{
 		uint32_t b24 = 0;
