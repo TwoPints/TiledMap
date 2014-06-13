@@ -26,6 +26,9 @@
 
 #include "TiledMapGL.h"
 
+// On iOS and GLES2 at least and dealing with quads, I don't think there's really that much difference.
+//#define USE_TRIANGLE_STRIPS
+
 void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,GLuint&)> &attribIndices )
 {
 	int32_t _numQuads    = maxTilesToRender;
@@ -35,36 +38,32 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
 	//////////////////////////////////////////////////////////////
 	// Indices
 	//////////////////////////////////////////////////////////////
+#if !defined(USE_TRIANGLE_STRIPS)
 	GLushort *indices = new GLushort[_numIndices];
 	GLushort *indexPtr = indices;
 	for (int i=0; i<_numQuads; ++i)
 	{
-#if !defined(USE_TRIANGLE_STRIPS)
 	    *indexPtr++ = (i << 2) + 0;
 	    *indexPtr++ = (i << 2) + 1;
 	    *indexPtr++ = (i << 2) + 2;
 	    *indexPtr++ = (i << 2) + 1;
 	    *indexPtr++ = (i << 2) + 3;
 	    *indexPtr++ = (i << 2) + 2;
-#else
-	    *indexPtr++ = (i << 2);
-	    *indexPtr++ = (i << 2);
-	    *indexPtr++ = (i << 2) + 1;
-	    *indexPtr++ = (i << 2) + 2;
-	    *indexPtr++ = (i << 2) + 3;
-	    *indexPtr++ = (i << 2) + 3;
-#endif
 	}
 	glGenBuffers(1, &indexVBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, _numIndices * sizeof(GLushort), indices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	delete[] indices;
+#else
+	_numVertices = _numIndices;
+#endif
 	
 	//////////////////////////////////////////////////////////////
 	// Vertices
 	//////////////////////////////////////////////////////////////
 	int32_t bufferIndexSize = _numIndices * sizeof(VertexDef);
+
 	vertexBufferIdx = 0;
 	vertexBuffer = new VertexDef[_numIndices];
 	memset(vertexBuffer, 0, bufferIndexSize);
@@ -88,8 +87,9 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
 	    glGenVertexArraysOES(1, &buffers[i].vao);
     	glBindVertexArrayOES(buffers[i].vao);
     	glBindBuffer(GL_ARRAY_BUFFER, buffers[i].vertexVBO);
+#if !defined(USE_TRIANGLE_STRIPS)
     	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
-		
+#endif
     	glVertexAttribPointer(attribPosition, 2, GL_SHORT, GL_FALSE, sizeof(VertexDef), (void *)(offsetof(VertexDef, x)));
     	glEnableVertexAttribArray(attribPosition);
     	glVertexAttribPointer(attribColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(VertexDef), (void *)(offsetof(VertexDef, color)));
@@ -98,7 +98,9 @@ void TiledGL::GenerateGLData( const std::function<void(uint32_t,GLuint&,GLuint&,
     	glEnableVertexAttribArray(attribTexCoords);
 		
     	glBindVertexArrayOES(0);
+#if !defined(USE_TRIANGLE_STRIPS)
     	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+#endif
     	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 	
@@ -166,6 +168,14 @@ void TiledGL::Update()
 				const GLshort b(t + static_cast<GLshort>(tileSet.tileHeight));
 				const GLshort r(l + static_cast<GLshort>(tileSet.tileWidth));
 				
+#if defined(USE_TRIANGLE_STRIPS)
+				pVertex->x = l;
+				pVertex->y = b;
+				pVertex->u = static_cast<GLfloat>(tileMetric.u0);
+				pVertex->v = static_cast<GLfloat>(tileMetric.v1);
+				pVertex->color = 0xffffffff;
+				++pVertex;
+#endif
 				pVertex->x = l;
 				pVertex->y = b;
 				pVertex->u = static_cast<GLfloat>(tileMetric.u0);
@@ -193,6 +203,15 @@ void TiledGL::Update()
 				pVertex->v = static_cast<GLfloat>(tileMetric.v0);
 				pVertex->color = 0xffffffff;
 				++pVertex;
+				
+#if defined(USE_TRIANGLE_STRIPS)
+				pVertex->x = r;
+				pVertex->y = t;
+				pVertex->u = static_cast<GLfloat>(tileMetric.u1);
+				pVertex->v = static_cast<GLfloat>(tileMetric.v0);
+				pVertex->color = 0xffffffff;
+				++pVertex;
+#endif
 			}
 		}
 	}
@@ -207,6 +226,10 @@ void TiledGL::Update()
 	buffers[vertexBufferIdx].numQuads = activeQuads;
 	buffers[vertexBufferIdx].numVertices = activeQuads * 4;
 	buffers[vertexBufferIdx].numIndices = activeQuads * 6;
+#if defined(USE_TRIANGLE_STRIPS)
+	buffers[vertexBufferIdx].numVertices = buffers[vertexBufferIdx].numIndices;
+#endif
+	
 	glBindBuffer(GL_ARRAY_BUFFER, buffers[vertexBufferIdx].vertexVBO);
 	void *ptr = glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
 	memcpy(ptr, vertexBuffer, buffers[vertexBufferIdx].numVertices * sizeof(VertexDef));
@@ -227,7 +250,7 @@ void TiledGL::Render( const std::function<void(uint32_t,bool)> &textureSetter ) 
 #if !defined(USE_TRIANGLE_STRIPS)
 			glDrawElements(GL_TRIANGLES, batchSize * 6, GL_UNSIGNED_SHORT, (void *)(lastBatchSize * 6 * sizeof(GLshort)));
 #else
-			glDrawElements(GL_TRIANGLE_STRIP, batchSize * 6, GL_UNSIGNED_SHORT, (void *)(lastBatchSize * 6 * sizeof(GLshort)));
+			glDrawArrays(GL_TRIANGLE_STRIP, lastBatchSize * 6, batchSize * 6);
 #endif
 			glBindVertexArrayOES(0);
 		}
